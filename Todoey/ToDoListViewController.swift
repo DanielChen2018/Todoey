@@ -10,7 +10,7 @@ import UIKit
 
 class ToDoListViewController : UITableViewController {
 
-    var itemArray = ["find me", "buy egg", "get self "]
+    var itemArray = [Item]()
     
     let defaults = UserDefaults.standard
     
@@ -18,7 +18,27 @@ class ToDoListViewController : UITableViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        if let items = defaults.array(forKey: "ToDoListArray") as? [String]{
+        let newItem1  = Item()
+        newItem1.title = "Find Mike"
+        itemArray.append(newItem1)
+        
+        let newItem2  = Item()
+        newItem2.title = "23333"
+        itemArray.append(newItem2)
+        
+        let newItem3  = Item()
+        newItem3.title = "nono"
+        itemArray.append(newItem3)
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        if let items = defaults.array(forKey: "ToDoListArray") as? [Item]{
             itemArray = items
         }
     
@@ -34,8 +54,22 @@ class ToDoListViewController : UITableViewController {
     
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+       
         let cell = tableView.dequeueReusableCell(withIdentifier: "ToDoItemCell", for: indexPath)
-        cell.textLabel?.text = itemArray[indexPath.row]
+        let item = itemArray[indexPath.row]
+        
+        cell.textLabel?.text = item.title
+        //Ternary operator  ==>
+        //value = condition ? valueIfTrue : valueIfFalse
+        
+        cell.accessoryType = item.done ? .checkmark : .none//改写下面的if else
+        
+//        if item.done == true{
+//            cell.accessoryType = .checkmark
+//        }else{
+//            cell.accessoryType = .none
+//        }
+        
         return cell
     }
     
@@ -47,12 +81,23 @@ class ToDoListViewController : UITableViewController {
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
 //        print(itemArray[indexPath.row])
         
+        itemArray[indexPath.row].done = !itemArray[indexPath.row].done// 用下面的方式改写为更简洁   就是当选择那一行一个东西的false等于他的反对面（true）
+        
+//        if itemArray[indexPath.row].done == false{
+//            itemArray[indexPath.row].done = true
+//        }else{
+//            itemArray[indexPath.row].done = false
+//        }
+        
+        
         if tableView.cellForRow(at: indexPath)?.accessoryType == .checkmark{     //table view的cell添加对号
             tableView.cellForRow(at: indexPath)?.accessoryType = .none
             
         }else{
             tableView.cellForRow(at: indexPath)?.accessoryType = .checkmark
         }
+        
+        tableView.reloadData()
         tableView.deselectRow(at: indexPath, animated: true)
         
         
@@ -71,7 +116,12 @@ class ToDoListViewController : UITableViewController {
         let alert = UIAlertController(title: "Add New Todoey Item", message: "", preferredStyle: .alert)
         let action = UIAlertAction(title: "Add Item", style: .default) { (action) in
             //what will happen when will user clict add button on uialert
-            self.itemArray.append(textField.text!)
+            
+            let newItem = Item()
+            newItem.title = textField.text!
+            
+            
+            self.itemArray.append(newItem)
             
             self.defaults.set(self.itemArray, forKey: "ToDoListArray")
             
