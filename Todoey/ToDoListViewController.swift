@@ -7,12 +7,19 @@
 //
 
 import UIKit
+import CoreData
 
 class ToDoListViewController : UITableViewController {
 
     var itemArray = [Item]()
-    let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Item.plist")
+//    let dataFilePath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Item.plist")
     
+    var selectedCategory : Category?{
+        didSet{
+            loadItem()
+        }
+    }
+    let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
 //    let defaults = UserDefaults.standard
     
     
@@ -34,9 +41,9 @@ class ToDoListViewController : UITableViewController {
 //        newItem3.title = "nono"
 //        itemArray.append(newItem3)
         
+//        let request : NSFetchRequest<Item> = Item.fetchRequest()
         
-        
-        loadItem()
+       
         
         
  
@@ -99,7 +106,11 @@ class ToDoListViewController : UITableViewController {
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
 //        print(itemArray[indexPath.row])
         
-        itemArray[indexPath.row].done = !itemArray[indexPath.row].done// 用下面的方式改写为更简洁   就是当选择那一行一个东西的false等于他的反对面（true）
+        
+//            context.delete(itemArray[indexPath.row])
+//            itemArray.remove(at: indexPath.row)//
+        itemArray[indexPath.row].done = !itemArray[indexPath.row].done
+            // 用下面的方式改写为更简洁   就是当选择那一行一个东西的false等于他的反对面（true）
         
 //        if itemArray[indexPath.row].done == false{
 //            itemArray[indexPath.row].done = true
@@ -135,10 +146,10 @@ class ToDoListViewController : UITableViewController {
         let action = UIAlertAction(title: "Add Item", style: .default) { (action) in
             //what will happen when will user clict add button on uialert
             
-            let newItem = Item()
+            let newItem = Item(context: self.context)
             newItem.title = textField.text!
-            
-            
+            newItem.done = false
+            newItem.parentCategory = self.selectedCategory
             self.itemArray.append(newItem)
             
             
@@ -165,13 +176,15 @@ class ToDoListViewController : UITableViewController {
     //MARK - Model Manupulation Methods
     
     func saveItem(){
-        let encoder = PropertyListEncoder()            //   self.defaults.set(self.itemArray, forKey: "ToDoListArray")
+                                     //        let encoder = PropertyListEncoder()
+                                       //   self.defaults.set(self.itemArray, forKey: "ToDoListArray")
         do{
-            let data = try encoder.encode(itemArray)
-            try data.write(to: dataFilePath!)
+            try context.save()
+                                    // let data = try encoder.encode(itemArray)
+                                  //  try data.write(to: dataFilePath!)
             
         }catch{
-            print("error\(error)")
+           print("error saving context\(error)")
         }
         self.tableView.reloadData()
         
@@ -179,24 +192,59 @@ class ToDoListViewController : UITableViewController {
     }
     
     
-    func loadItem(){
-        if let data = try? Data(contentsOf: dataFilePath!){
-            let decoder = PropertyListDecoder()
-            do{
-                itemArray = try decoder.decode([Item].self, from: data)
-            }catch{
-                print("erreor\(error)")
+    func loadItem(with request : NSFetchRequest<Item> = Item.fetchRequest(), predicate : NSPredicate? = nil){ //default value item.fetchrequest()
+//        if let data = try? Data(contentsOf: dataFilePath!){。    老方法
+//            let decoder = PropertyListDecoder()
+//            do{
+//                itemArray = try decoder.decode([Item].self, from: data)
+//            }catch{
+//                print("erreor\(error)")
+//            }
+//
+        let categoryPredicate = NSPredicate(format: "parentCategory.name MATCHES %@", selectedCategory!.name!)
+
+        if let additionalPredicate = predicate{
+            request.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [categoryPredicate,additionalPredicate])
+        }
+        
+//       let compoundPredicate = NSCompoundPredicate(andPredicateWithSubpredicates: [categoryPredicate,predicate])
+//        request.predicate = compoundPredicate
+        
+        
+        do{
+            itemArray = try context.fetch(request)
+        }catch{
+            print("fetching error\(error)")
+        }
+        tableView.reloadData()
+        
+    }
+    
+    
+}
+//Mark - SearchBar Methods
+extension ToDoListViewController : UISearchBarDelegate{ // 额外的添加 delegate
+    
+    func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+        
+        let request : NSFetchRequest<Item> = Item.fetchRequest()
+        
+        let predicate = NSPredicate(format: "title CONTAINS[cd] %@", searchBar.text!) // %@的值等于searchbar里面输入的值 （searchbar。text）
+        
+        request.sortDescriptors = [NSSortDescriptor(key: "title", ascending: true)]
+        
+        loadItem(with: request, predicate: predicate)
+        
+    }
+    
+    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+        if searchBar.text?.count == 0{
+            loadItem()
+            DispatchQueue.main.async {
+                searchBar.resignFirstResponder()//重设定第一反应者
             }
             
         }
     }
-    
-    
-    
-    
-    
-    
-    
-    
 }
 
